@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Admin — Dashboard{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Адмін-панель</h1>
+<nav class="mb-4 space-x-2">
+  <a href="/admin/feedbacks" class="text-blue-700">Відгуки</a>  |
+  <a href="/admin/orders" class="text-blue-700">Замовлення</a>  |
+  <a href="/admin/logout" class="text-red-600">Вийти</a>
+</nav>
+<p>Ласкаво просимо в адмін-панель MotoDrive.</p>
+{% endblock %}

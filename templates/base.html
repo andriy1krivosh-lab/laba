@@ -1,36 +1,33 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Мотоцикли{% endblock %} - Yamaha Style</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}MotoDrive{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
+  <header class="bg-blue-900 text-white">
+    <div class="container mx-auto flex items-center justify-between p-4">
+      <a href="/" class="text-2xl font-bold">MotoDrive</a>
+      <nav class="space-x-4">
+        <a href="/" class="hover:text-gray-300">Головна</a>
+        <a href="/about" class="hover:text-gray-300">Про нас</a>
+        <a href="/catalog" class="hover:text-gray-300">Каталог</a>
+        <a href="/shop" class="hover:text-gray-300">Магазин</a>
+        <a href="/feedback" class="hover:text-gray-300">Відгуки</a>
+        <a href="/contacts" class="hover:text-gray-300">Контакти</a>
+        <a href="/admin" class="hover:text-gray-300">Адмін</a>
+      </nav>
+    </div>
+  </header>
 
-    <!-- Меню -->
-    <nav class="bg-blue-900 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="/" class="font-bold text-xl">MotoDrive</a>
-            <div class="space-x-4">
-                <a href="/" class="hover:text-gray-300">Головна</a>
-                <a href="/about" class="hover:text-gray-300">Про нас</a>
-                <a href="/catalog" class="hover:text-gray-300">Каталог</a>
-                <a href="/contact" class="hover:text-gray-300">Контакти</a>
-            </div>
-        </div>
-    </nav>
+  <main class="container mx-auto p-6">
+    {% block content %}{% endblock %}
+  </main>
 
-    <!-- Контент -->
-    <main class="container mx-auto p-4">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-blue-900 text-white p-4 mt-8 text-center">
-        © 2025 MotoDrive. Всі права захищені.
-    </footer>
-
+  <footer class="bg-blue-900 text-white p-4 text-center">
+    © MotoDrive 2025
+  </footer>
 </body>
 </html>
