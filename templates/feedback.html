@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Відгуки — MotoDrive{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Відгуки</h1>
+<form action="/feedback/add" method="post" class="bg-white p-4 rounded shadow mb-4">
+  <input type="text" name="name" placeholder="Ваше ім'я" class="border p-2 w-full mb-2">
+  <textarea name="message" placeholder="Ваш відгук" class="border p-2 w-full mb-2"></textarea>
+  <button class="bg-blue-700 text-white px-3 py-1 rounded">Відправити</button>
+</form>
+
+{% for it in items %}
+<div class="bg-white p-4 rounded shadow mb-2">
+  <div class="text-sm text-gray-500">{{ it['created_at'] }}</div>
+  <div class="font-bold">{{ it['name'] }}</div>
+  <div>{{ it['message'] }}</div>
+</div>
+{% else %}
+<p>Відгуків ще немає.</p>
+{% endfor %}
+{% endblock %}

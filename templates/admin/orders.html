@@ -18,6 +18,8 @@
         <div>
           <form method="post" class="flex items-center">
             <input type="hidden" name="order_id" value="{{ odata['order']['id'] }}">
+            <!-- Якщо використовуєш CSRF token, додай його тут -->
+            {# {{ csrf_token() }} #}
             <select name="status" class="border p-1 mr-2">
               <option value="new" {% if odata['order']['status']=='new' %}selected{% endif %}>new</option>
               <option value="processing" {% if odata['order']['status']=='processing' %}selected{% endif %}>processing</option>
@@ -32,8 +34,11 @@
       <div class="mt-2">
         <h4 class="font-semibold">Товари:</h4>
         <ul>
+          {% set total = 0 %}
           {% for it in odata['items'] %}
-            <li>{{ it['title'] }} — x{{ it['quantity'] }} — {{ it['price'] }} USD</li>
+            {% set item_total = it['price'] * it['quantity'] %}
+            {% set total = total + item_total %}
+            <li>{{ it['title'] }} — x{{ it['quantity'] }} — {{ item_total }} USD</li>
           {% endfor %}
         </ul>
       </div>

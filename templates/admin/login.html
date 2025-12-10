@@ -1,11 +1,27 @@
 {% extends 'base.html' %}
+
 {% block title %}Admin login{% endblock %}
+
 {% block content %}
 <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
   <h2 class="text-xl font-bold mb-4">Адмін панель — вхід</h2>
+
+  <!-- Флеш-повідомлення -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-4">
+        {% for category, message in messages %}
+          <div class="p-2 mb-2 rounded {{ 'bg-red-200 text-red-800' if category=='error' else 'bg-green-200 text-green-800' }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
   <form method="post">
-    <input name="username" class="border p-2 w-full mb-2" placeholder="username">
-    <input name="password" type="password" class="border p-2 w-full mb-2" placeholder="password">
+    <input name="username" type="text" class="border p-2 w-full mb-2" placeholder="Username">
+    <input name="password" type="password" class="border p-2 w-full mb-2" placeholder="Password">
     <button class="bg-blue-700 text-white px-3 py-1 rounded">Увійти</button>
   </form>
 </div>

@@ -17,17 +17,31 @@
         <a href="/shop" class="hover:text-gray-300">Магазин</a>
         <a href="/feedback" class="hover:text-gray-300">Відгуки</a>
         <a href="/contacts" class="hover:text-gray-300">Контакти</a>
-        <a href="/admin" class="hover:text-gray-300">Адмін</a>
       </nav>
     </div>
   </header>
 
   <main class="container mx-auto p-6">
+    <!-- Відображення флеш-повідомлень -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-4">
+          {% for category, message in messages %}
+            <div class="p-2 mb-2 rounded {{ 'bg-green-200 text-green-800' if category=='success' else 'bg-red-200 text-red-800' }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     {% block content %}{% endblock %}
   </main>
 
   <footer class="bg-blue-900 text-white p-4 text-center">
     © MotoDrive 2025
   </footer>
+
+  {% block scripts %}{% endblock %}
 </body>
 </html>
