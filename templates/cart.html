@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Корзина — MotoDrive{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Корзина</h1>
+
+{% if cart and cart|length > 0 %}
+<table class="w-full bg-white rounded shadow">
+  <tr class="border-b">
+    <th class="p-2 text-left">Товар</th>
+    <th class="p-2 text-left">Ціна</th>
+    <th class="p-2 text-left">Кількість</th>
+    <th class="p-2 text-left">Сума</th>
+    <th></th>
+  </tr>
+
+  {% for item in cart %}
+  <tr class="border-b">
+    <td class="p-2">{{ item.title }}</td>
+    <td class="p-2">{{ item.price }} USD</td>
+
+    <td class="p-2">
+      <form method="post" action="{{ url_for('shop.update_cart') }}" class="flex">
+        <input type="hidden" name="product_id" value="{{ item.id }}">
+        <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
+               class="border p-1 w-20">
+        <button class="ml-2 bg-blue-700 text-white px-2 py-1 rounded">
+          ✔
+        </button>
+      </form>
+    </td>
+
+    <td class="p-2 font-semibold">
+      {{ item.price * item.quantity }} USD
+    </td>
+
+    <td class="p-2">
+      <form method="post" action="{{ url_for('shop.remove_from_cart') }}">
+        <input type="hidden" name="product_id" value="{{ item.id }}">
+        <button class="bg-red-600 text-white px-3 py-1 rounded">X</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<div class="text-right text-xl font-bold mt-4">
+  Разом: {{ total }} USD
+</div>
+
+<!-- Кнопка оформлення замовлення через POST -->
+<form method="post" action="{{ url_for('shop.checkout') }}">
+  <button class="mt-4 inline-block bg-green-700 text-white px-4 py-2 rounded">
+    Оформити замовлення
+  </button>
+</form>
+
+{% else %}
+<p>Корзина порожня.</p>
+{% endif %}
+
+{% endblock %}

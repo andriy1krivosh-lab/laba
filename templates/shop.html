@@ -2,18 +2,25 @@
 {% block title %}Магазин — MotoDrive{% endblock %}
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">Магазин</h1>
-<p>Оберіть товар і замовте його онлайн.</p>
+<p>Оберіть товар та додайте його в корзину.</p>
+
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
   {% for p in products %}
   <div class="bg-white p-4 rounded shadow">
-    <h3 class="font-bold">{{ p.title }}</h3>
+    <h3 class="font-bold text-lg">{{ p.title }}</h3>
     <p>Категорія: {{ p.category or '—' }}</p>
-    <p class="font-semibold">{{ p.price }} USD</p>
-    <form action="/order" method="post" class="mt-2">
+    <p class="font-semibold text-blue-700 text-xl">{{ p.price }} USD</p>
+
+    <form action="{{ url_for('shop.add_to_cart') }}" method="post" class="mt-3">
       <input type="hidden" name="product_id" value="{{ p.id }}">
-      <input type="number" name="quantity" value="1" min="1" class="border p-1 w-20">
-      <input type="text" name="name" placeholder="Ваше ім'я" class="border p-1 w-full mt-2">
-      <button class="bg-blue-700 text-white px-3 py-1 mt-2 rounded">Замовити</button>
+
+      <label class="text-sm">Кількість:</label>
+      <input type="number" name="quantity" value="1" min="1" 
+             class="border p-1 w-20 mb-2">
+
+      <button class="bg-blue-700 text-white px-3 py-1 rounded w-full">
+        Додати в корзину
+      </button>
     </form>
   </div>
   {% endfor %}
