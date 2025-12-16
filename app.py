@@ -1,8 +1,9 @@
-from flask import Flask, render_template, redirect, url_for, session, request, flash
+from flask import Flask, render_template, redirect, url_for, session, request, flash, jsonify
 from models import init_db, get_product
 from routes.feedback import feedback_bp
 from routes.admin import admin_bp
 from routes.shop import shop_bp
+from routes.api_feedback import api_feedback_bp  # новий Blueprint для API
 
 app = Flask(__name__)
 app.secret_key = 'replace_this_with_a_strong_secret_in_prod'
@@ -12,7 +13,9 @@ app.secret_key = 'replace_this_with_a_strong_secret_in_prod'
 # ------------------------------
 app.register_blueprint(feedback_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
-app.register_blueprint(shop_bp, url_prefix='/shop')  # магазин: /shop/
+app.register_blueprint(shop_bp, url_prefix='/shop')
+app.register_blueprint(api_feedback_bp, url_prefix='/api/v1/feedback')  # API
+
 
 # ------------------------------
 # Головні сторінки
