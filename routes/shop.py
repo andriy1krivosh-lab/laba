@@ -15,7 +15,19 @@ def init_cart():
 # ------------------------------
 @shop_bp.route('/')
 def shop_home():
-    products = get_products()
+    rows = get_products()
+
+    products = []
+    for p in rows:
+        products.append({
+            "id": p["id"],
+            "title": p["title"],
+            "price": p["price"],
+            "category": p["category"],
+            # автоматично підставляє moto1.jpg, moto2.jpg ...
+            "image": f"images/products/moto{p['id']}.jpg"
+        })
+
     return render_template('shop.html', products=products)
 
 # ------------------------------
