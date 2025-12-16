@@ -1,0 +1,717 @@
+## 👤 Автор
+
+* Студенти: Прошек Тимофій Миколайович, Кривош Андрій Анатолійович
+* Група: ІПЗ-21
+
+## Overview
+MotoDrive — вебзастосунок на Flask із двома типами інтерфейсу:
+1) HTML-сторінки (Jinja2 templates) для магазину, корзини, відгуків та адмін-панелі.
+2) JSON API для інтеграції з фронтендом (сторінка API Demo), що працює через fetch (async/await).
+
+Дані зберігаються в SQLite (`data/db.sqlite`). Сесії Flask використовуються для корзини та авторизації адміна.
+
+---
+
+## Components
+
+```mermaid
+flowchart LR
+  U[User Browser] -->|HTTP| F[Flask App app.py]
+  F --> T[Jinja2 Templates /templates]
+  F --> S[Session (cart, admin auth)]
+  F -->|SQL| DB[(SQLite data/db.sqlite)]
+  U <-->|fetch JSON| API[/API endpoints /api/* and /api/v1/feedback/*/]
+````
+
+---
+
+## Routing / Modules
+
+* `app.py` — старт Flask, реєстрація Blueprint, CORS, маршрути сторінок.
+* `routes/shop.py` — магазин, корзина, checkout.
+* `routes/feedback.py` — сторінка відгуків (HTML).
+* `routes/admin.py` — адмін-панель (логін + керування товарами/замовленнями/клієнтами/відгуками).
+* `routes/api.py` — JSON API: products, feedbacks, orders (для API Demo).
+* `routes/api_feedback.py` — JSON API v1 (розширений CRUD для feedback).
+
+---
+
+## Key Flows
+
+### 1) Feedback через API Demo
+
+```mermaid
+sequenceDiagram
+  participant B as Browser (api-demo.html)
+  participant S as Flask API
+  participant D as SQLite
+
+  B->>S: GET /api/feedbacks
+  S->>D: SELECT feedback ORDER BY created_at DESC
+  D-->>S: rows
+  S-->>B: 200 JSON list
+
+  B->>S: POST /api/feedbacks {name,message}
+  S->>D: INSERT INTO feedback(...)
+  S-->>B: 201 {"status":"success"}
+  B->>S: GET /api/feedbacks (refresh)
+```
+
+### 2) Створення замовлення через API Demo
+
+```mermaid
+sequenceDiagram
+  participant B as Browser (api-demo.html)
+  participant S as Flask API
+  participant D as SQLite
+
+  B->>S: GET /api/products
+  S->>D: SELECT products
+  S-->>B: 200 JSON list
+
+  B->>S: POST /api/orders {customer_name, items[]}
+  S->>D: INSERT INTO orders(...)
+  S->>D: INSERT INTO order_items(...)
+  S-->>B: 201 {status, order_id}
+```
+
+### 3) Оформлення замовлення у магазині (HTML)
+
+* Користувач додає товари в корзину (session).
+* `POST /shop/checkout` створює запис у `orders` та `order_items`, очищає корзину.
+
+---
+
+## Security Notes (for учебного проекта)
+
+* Адмін-логін базується на `users` (admin/admin за замовчуванням).
+* API не має авторизації — зроблено для демонстрації лабораторної інтеграції.
+* CORS дозволений лише для `/api/*`.
+
+````
+
+---
+
+# 2) docs/DATABASE.md
+
+```md
+# Database
+
+## Database location
+SQLite database file: `data/db.sqlite`
+
+## ER Diagram
+```mermaid
+erDiagram
+  PRODUCTS ||--o{ ORDER_ITEMS : contains
+  ORDERS ||--o{ ORDER_ITEMS : includes
+  CLIENTS ||--o{ ORDERS : places
+
+  FEEDBACK {
+    int id PK
+    text name
+    text message
+    datetime created_at
+  }
+
+  PRODUCTS {
+    int id PK
+    text title
+    real price
+    text category
+  }
+
+  CLIENTS {
+    int id PK
+    text name
+    text email
+    text phone
+  }
+
+  ORDERS {
+    int id PK
+    int client_id FK
+    text customer_name
+    text status
+    datetime created_at
+  }
+
+  ORDER_ITEMS {
+    int id PK
+    int order_id FK
+    int product_id FK
+    int quantity
+  }
+
+  USERS {
+    int id PK
+    text username UNIQUE
+    text password
+    text role
+  }
+````
+
+---
+
+## Tables
+
+### feedback
+
+| Field      | Type     | Notes                     |
+| ---------- | -------- | ------------------------- |
+| id         | INTEGER  | PK, AUTOINCREMENT         |
+| name       | TEXT     | NOT NULL                  |
+| message    | TEXT     | NOT NULL                  |
+| created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP |
+
+### products
+
+| Field    | Type    | Notes    |
+| -------- | ------- | -------- |
+| id       | INTEGER | PK       |
+| title    | TEXT    | NOT NULL |
+| price    | REAL    | NOT NULL |
+| category | TEXT    | optional |
+
+> Фотографії товарів у поточній версії не зберігаються в БД: ми використовуємо правило `moto{id}.jpg` у `static/images/products/`.
+
+### clients
+
+| Field | Type    | Notes    |
+| ----- | ------- | -------- |
+| id    | INTEGER | PK       |
+| name  | TEXT    | optional |
+| email | TEXT    | optional |
+| phone | TEXT    | optional |
+
+### orders
+
+| Field         | Type     | Notes                      |
+| ------------- | -------- | -------------------------- |
+| id            | INTEGER  | PK                         |
+| client_id     | INTEGER  | FK -> clients.id, nullable |
+| customer_name | TEXT     | e.g. "Гість"               |
+| status        | TEXT     | default 'new'              |
+| created_at    | DATETIME | default CURRENT_TIMESTAMP  |
+
+### order_items
+
+| Field      | Type    | Notes             |
+| ---------- | ------- | ----------------- |
+| id         | INTEGER | PK                |
+| order_id   | INTEGER | FK -> orders.id   |
+| product_id | INTEGER | FK -> products.id |
+| quantity   | INTEGER | amount            |
+
+### users
+
+| Field    | Type    | Notes                                |
+| -------- | ------- | ------------------------------------ |
+| id       | INTEGER | PK                                   |
+| username | TEXT    | UNIQUE                               |
+| password | TEXT    | plain text (учбовий варіант)         |
+| role     | TEXT    | default 'client', admin uses 'admin' |
+
+---
+
+## Seed data
+
+При першому запуску `init_db()`:
+
+* додаються 5 тестових продуктів Yamaha;
+* створюється адмін-користувач:
+
+  * username: `admin`
+  * password: `admin`
+  * role: `admin`
+
+````
+
+---
+
+# 3) docs/API.md
+
+```md
+# API Documentation
+
+## Base URLs
+- API v2 (used in API Demo): `/api`
+- API v1 feedback CRUD: `/api/v1/feedback`
+
+CORS enabled for `/api/*`.
+
+---
+
+## API v2: Products
+
+### GET /api/products
+Returns list of products.
+
+**Response 200**
+```json
+[
+  { "id": 1, "title": "Yamaha R1", "price": 18999, "category": "Sport" }
+]
+````
+
+---
+
+## API v2: Feedbacks
+
+### GET /api/feedbacks
+
+Returns list of feedbacks (sorted by created_at DESC).
+
+**Response 200**
+
+```json
+[
+  { "id": 1, "name": "Іван", "message": "Супер!", "created_at": "2025-01-01 10:00:00" }
+]
+```
+
+### POST /api/feedbacks
+
+Creates new feedback.
+
+**Request body**
+
+```json
+{ "name": "Іван", "message": "Все сподобалось!" }
+```
+
+**Response 201**
+
+```json
+{ "status": "success" }
+```
+
+**Errors**
+
+* `400` — якщо `message` < 2 символів:
+
+```json
+{ "error": "message must be at least 2 characters" }
+```
+
+### DELETE /api/feedbacks/{id}
+
+Deletes feedback by id.
+
+**Response 200**
+
+```json
+{ "status": "deleted" }
+```
+
+---
+
+## API v2: Orders
+
+### GET /api/orders
+
+Returns list of orders with items (same idea as admin orders).
+
+**Response 200**
+
+```json
+[
+  {
+    "order": {
+      "id": 1,
+      "client_id": null,
+      "customer_name": "Гість",
+      "status": "new",
+      "created_at": "2025-01-01 11:00:00"
+    },
+    "items": [
+      { "quantity": 2, "title": "Yamaha MT-07", "price": 7599 }
+    ]
+  }
+]
+```
+
+### POST /api/orders
+
+Creates new order.
+
+**Request body**
+
+```json
+{
+  "customer_name": "Гість",
+  "items": [
+    { "product_id": 1, "quantity": 2 }
+  ]
+}
+```
+
+**Response 201**
+
+```json
+{ "status": "success", "order_id": 3 }
+```
+
+**Errors**
+
+* `400` — якщо items порожній або не list:
+
+```json
+{ "error": "items must be a non-empty list" }
+```
+
+* `400` — якщо невалідний формат items:
+
+```json
+{ "error": "invalid items format" }
+```
+
+* `400` — якщо product_id/quantity <= 0:
+
+```json
+{ "error": "product_id and quantity must be positive" }
+```
+
+### PATCH /api/orders/{id}
+
+Updates order status.
+
+**Request body**
+
+```json
+{ "status": "processing" }
+```
+
+**Response 200**
+
+```json
+{ "status": "updated" }
+```
+
+**Errors**
+
+* `400` — якщо status < 2 символів:
+
+```json
+{ "error": "status must be at least 2 characters" }
+```
+
+---
+
+## API v1: Feedback CRUD (extended)
+
+### GET /api/v1/feedback/
+
+List all feedbacks.
+
+### POST /api/v1/feedback/
+
+Create feedback.
+
+**Request**
+
+```json
+{ "name": "Анонім", "message": "Hello" }
+```
+
+**Response 201**
+
+```json
+{ "message": "Відгук додано" }
+```
+
+### GET /api/v1/feedback/{id}
+
+Get a single feedback.
+
+**Response 200**
+
+```json
+{ "id": 1, "name": "Анонім", "message": "Hello", "created_at": "..." }
+```
+
+**Error 404**
+
+```json
+{ "error": "Відгук не знайдено" }
+```
+
+### PUT /api/v1/feedback/{id}
+
+Updates feedback message (note: implementation deletes and re-inserts).
+
+**Request**
+
+```json
+{ "message": "New message" }
+```
+
+**Response 200**
+
+```json
+{ "message": "Відгук оновлено" }
+```
+
+### DELETE /api/v1/feedback/{id}
+
+Deletes feedback.
+
+**Response 200**
+
+```json
+{ "message": "Відгук видалено" }
+```
+
+### GET /api/v1/feedback/docs
+
+Returns simple JSON docs for v1 endpoints.
+
+````
+
+---
+
+# 4) docs/USER_GUIDE.md
+
+```md
+# User Guide
+
+## Navigation
+У верхньому меню доступні розділи:
+- Головна
+- Про нас
+- Магазин
+- Відгуки
+- Контакти
+- Корзина
+- API (API Demo)
+
+скрін: `lab-reports/Скіншоти/головна.png`
+
+---
+
+## Магазин
+### Перегляд товарів
+Відкрийте `Магазин` (`/shop`). Кожен товар відображається карткою з ціною, категорією та фотографією.
+
+Фото товарів беруться з `static/images/products/` за правилом:
+- товар з id=1 → `moto1.jpg`
+- id=2 → `moto2.jpg` і т.д.
+
+> Скрін: `lab-reports/Скіншоти/магазин.png`
+
+### Додавання в корзину
+1) Виберіть кількість
+2) Натисніть **“Додати в корзину”**
+3) Перейдіть у `Корзина`
+
+---
+
+## Корзина
+Сторінка `/cart` або `/shop/cart` показує додані товари.
+
+Можна:
+- змінити кількість (кнопка ✔)
+- видалити позицію (кнопка X)
+- оформити замовлення (“Оформити замовлення”)
+
+---
+
+## Відгуки
+Сторінка `/feedback`.
+1) Введіть ім’я (опційно)
+2) Введіть текст відгуку
+3) Натисніть “Відправити”
+
+---
+
+## API Demo (асинхронна робота з API)
+Сторінка `/api-demo` демонструє роботу з API через fetch (async/await).
+
+Функції:
+- завантаження списку відгуків з API
+- додавання нового відгуку без перезавантаження
+- видалення відгуку
+- створення замовлення (вибір товару та кількості)
+- зміна статусу замовлення (PATCH)
+
+---
+
+## Адмін-панель
+### Вхід
+- URL: `/admin/login`
+- Default credentials:
+  - username: `admin`
+  - password: `admin`
+
+### Замовлення
+- URL: `/admin/orders`
+- Можна змінювати статус замовлення зі списку.
+
+---
+
+## New Features (додані функції)
+- JSON API (`/api/*`) для інтеграції з фронтендом
+- Сторінка API Demo з fetch/async/await та обробкою помилок
+- Фотографії товарів у магазині (`static/images/products/moto{id}.jpg`)
+- Docker + docker-compose для швидкого запуску
+
+---
+
+## Troubleshooting (типові проблеми)
+
+### 1) "Failed to fetch" у API Demo
+Причини:
+- Flask не запущений
+- неправильний URL
+- блокування CORS
+
+Рішення:
+- запустіть сервер: `python app.py`
+- перевірте, що API відкривається: `/api/feedbacks`
+- CORS уже дозволений для `/api/*`
+
+### 2) 404 на /api/...
+Переконайтесь, що blueprint зареєстрований:
+- `app.register_blueprint(api_bp, url_prefix="/api")`
+
+### 3) Не показуються фото товарів
+Перевірте:
+- файли лежать у `static/images/products/`
+- назви відповідають id: `moto1.jpg`, `moto2.jpg`, ...
+- картинка відкривається напряму:
+  `/static/images/products/moto1.jpg`
+
+### 4) База не створилась / нема таблиць
+- перевірте шлях `DB_NAME = 'data/db.sqlite'`
+- переконайтесь, що папка `data/` існує
+- запуск `init_db()` відбувається у `app.py` перед run
+````
+
+---
+
+# 5) docs/DEPLOYMENT.md
+
+````md
+# Deployment
+
+## Requirements
+- Python 3.12+
+- pip
+- (optional) Docker + Docker Compose
+
+## Dependencies
+See `requirements.txt`:
+- Flask
+- flask-cors
+
+## Local setup (venv)
+```bash
+python -m venv venv
+# Windows: venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
+
+pip install -r requirements.txt
+python app.py
+````
+
+App доступний:
+
+* [http://127.0.0.1:5000](http://127.0.0.1:5000)
+
+## Docker setup
+
+### Build & run
+
+```bash
+docker compose up --build
+```
+
+Після запуску:
+
+* [http://localhost:5000](http://localhost:5000)
+
+### Volumes
+
+docker-compose монтує `./data` → `/app/data`, щоб база зберігалась між перезапусками.
+
+## Environment variables
+
+Наразі використовується:
+
+* `FLASK_ENV=development` (в docker-compose)
+
+Рекомендовано додати (опційно для покращення безпеки):
+
+* `FLASK_SECRET_KEY` — секретний ключ для Flask session
+* `DATABASE_PATH` — шлях до sqlite (за потреби)
+
+> Якщо треба — можу дати точний патч коду, щоб app.secret_key брався з env.
+
+````
+
+---
+
+# 6) Оновлений README.md
+
+Ось “універсальний” README (під ваш проєкт):
+
+```md
+# MotoDrive
+
+Вебзастосунок-магазин на Flask з корзиною, відгуками та адмін-панеллю. Додатково реалізовано JSON API та демонстраційну сторінку API Demo з асинхронним JavaScript (fetch/async/await).
+
+## 🔧 Технології
+- Python 3.12
+- Flask
+- SQLite
+- Jinja2 templates
+- JavaScript (fetch, async/await)
+- Docker / Docker Compose
+- flask-cors (CORS для API)
+
+## ✅ Реалізовані функції
+- Перегляд товарів у магазині
+- Фото товарів (`static/images/products/moto{id}.jpg`)
+- Корзина: додавання, оновлення кількості, видалення
+- Оформлення замовлення (створення orders + order_items)
+- Сторінка відгуків (HTML форма)
+- Адмін-панель:
+  - логін/логаут
+  - перегляд замовлень та оновлення статусу
+  - керування товарами/клієнтами/відгуками
+- JSON API:
+  - `/api/products`
+  - `/api/feedbacks` (GET/POST/DELETE)
+  - `/api/orders` (GET/POST) + `/api/orders/{id}` (PATCH)
+  - `/api/v1/feedback` (CRUD, docs)
+- Сторінка `/api-demo` для демонстрації роботи API у браузері
+
+## 🚀 Запуск (локально)
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# або venv\Scripts\activate для Windows
+pip install -r requirements.txt
+python app.py
+````
+
+Відкрити:
+
+* [http://127.0.0.1:5000](http://127.0.0.1:5000)
+
+## 🐳 Запуск через Docker
+
+```bash
+docker compose up --build
+```
+
+Відкрити:
+
+* [http://localhost:5000](http://localhost:5000)
+
+## 📄 Ліцензія
+
+MIT License 
+
+```
