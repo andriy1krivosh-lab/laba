@@ -1,6 +1,7 @@
 import sqlite3
 
-DB_NAME = 'db.sqlite'
+DB_NAME = 'data/db.sqlite'
+
 
 
 # ----------------------- BASIC CONNECTION -----------------------
