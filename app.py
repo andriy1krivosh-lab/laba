@@ -4,9 +4,13 @@ from routes.feedback import feedback_bp
 from routes.admin import admin_bp
 from routes.shop import shop_bp
 from routes.api_feedback import api_feedback_bp  # новий Blueprint для API
+from routes.api import api_bp
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = 'replace_this_with_a_strong_secret_in_prod'
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+app.register_blueprint(api_bp, url_prefix="/api")
 
 # ------------------------------
 # Register blueprints
@@ -35,6 +39,10 @@ def catalog():
 @app.route('/contacts')
 def contacts():
     return render_template('contacts.html')
+
+@app.route("/api-demo")
+def api_demo():
+    return render_template("api-demo.html")
 
 # ------------------------------
 # КОРЗИНА

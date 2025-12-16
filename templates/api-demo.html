@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block title %}API Demo — MotoDrive{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">API Demo (fetch + async/await)</h1>
+
+<div id="message" class="hidden mb-4 p-3 rounded"></div>
+<div id="loading" class="hidden mb-4 p-3 rounded bg-yellow-100 text-yellow-900">⏳ Завантаження...</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+  <!-- FEEDBACK -->
+  <section class="bg-white p-4 rounded shadow">
+    <h2 class="text-xl font-semibold mb-3">Відгуки (API)</h2>
+
+    <form id="feedbackForm" class="space-y-2 mb-4">
+      <input id="fbName" class="border p-2 w-full" placeholder="Ваше ім'я">
+      <textarea id="fbMessage" class="border p-2 w-full" placeholder="Ваш відгук"></textarea>
+      <button class="bg-blue-700 text-white px-4 py-2 rounded w-full">Надіслати</button>
+    </form>
+
+    <div id="feedbackList" class="space-y-2"></div>
+  </section>
+
+  <!-- ORDERS -->
+  <section class="bg-white p-4 rounded shadow">
+    <h2 class="text-xl font-semibold mb-3">Замовлення (API)</h2>
+
+    <form id="orderForm" class="space-y-2 mb-4">
+      <input id="customerName" class="border p-2 w-full" placeholder="Ім'я замовника (наприклад: Гість)">
+
+      <div class="grid grid-cols-3 gap-2">
+        <select id="productSelect" class="border p-2 col-span-2"></select>
+        <input id="productQty" type="number" min="1" value="1" class="border p-2">
+      </div>
+
+      <button type="button" id="addItemBtn" class="bg-gray-800 text-white px-4 py-2 rounded w-full">
+        Додати товар до замовлення
+      </button>
+
+      <div id="orderItems" class="text-sm bg-gray-50 p-2 rounded"></div>
+
+      <button class="bg-green-700 text-white px-4 py-2 rounded w-full">Створити замовлення</button>
+    </form>
+
+    <div id="ordersList" class="space-y-3"></div>
+  </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = {
+  products: "/api/products",
+  feedbacks: "/api/feedbacks",
+  orders: "/api/orders"
+};
+
+let pendingItems = []; // items для нового замовлення
+
+function showLoading(show) {
+  document.getElementById("loading").classList.toggle("hidden", !show);
+}
+
+function showMessage(text, type) {
+  const box = document.getElementById("message");
+  box.textContent = text;
+  box.className = "mb-4 p-3 rounded";
+
+  if (type === "success") box.classList.add("bg-green-100", "text-green-900");
+  else box.classList.add("bg-red-100", "text-red-900");
+
+  box.classList.remove("hidden");
+  setTimeout(() => box.classList.add("hidden"), 4000);
+}
+
+async function apiFetch(url, options = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options
+  });
+
+  // пробуємо прочитати json-помилку
+  let data = null;
+  try { data = await res.json(); } catch(e) {}
+
+  if (!res.ok) {
+    const msg = (data && data.error) ? data.error : `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* -------------------------
+   FEEDBACK
+-------------------------- */
+async function loadFeedbacks() {
+  const items = await apiFetch(API.feedbacks);
+  const list = document.getElementById("feedbackList");
+  list.innerHTML = "";
+
+  if (!items || items.length === 0) {
+    list.innerHTML = `<div class="text-gray-500">Відгуків ще немає.</div>`;
+    return;
+  }
+
+  for (const it of items) {
+    const div = document.createElement("div");
+    div.className = "border rounded p-3";
+
+    div.innerHTML = `
+      <div class="text-xs text-gray-500">${it.created_at || ""}</div>
+      <div class="font-semibold">${it.name || "Анонім"}</div>
+      <div class="mb-2">${it.message || ""}</div>
+      <button class="bg-red-600 text-white px-3 py-1 rounded" data-id="${it.id}">
+        Видалити
+      </button>
+    `;
+
+    div.querySelector("button").addEventListener("click", async () => {
+      try {
+        showLoading(true);
+        await apiFetch(`${API.feedbacks}/${it.id}`, { method: "DELETE" });
+        showMessage("✅ Відгук видалено", "success");
+        await loadFeedbacks();
+      } catch (e) {
+        showMessage("❌ " + e.message, "error");
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    list.appendChild(div);
+  }
+}
+
+document.getElementById("feedbackForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("fbName").value.trim();
+  const message = document.getElementById("fbMessage").value.trim();
+
+  if (message.length < 2) {
+    showMessage("❌ Повідомлення має містити мінімум 2 символи", "error");
+    return;
+  }
+
+  try {
+    showLoading(true);
+    await apiFetch(API.feedbacks, {
+      method: "POST",
+      body: JSON.stringify({ name, message })
+    });
+    showMessage("✅ Відгук надіслано", "success");
+    e.target.reset();
+    await loadFeedbacks();
+  } catch (err) {
+    showMessage("❌ " + err.message, "error");
+  } finally {
+    showLoading(false);
+  }
+});
+
+/* -------------------------
+   PRODUCTS (для форми замовлення)
+-------------------------- */
+async function loadProducts() {
+  const products = await apiFetch(API.products);
+  const sel = document.getElementById("productSelect");
+  sel.innerHTML = "";
+
+  for (const p of products) {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = `${p.title} (${p.price} USD)`;
+    sel.appendChild(opt);
+  }
+}
+
+/* -------------------------
+   ORDERS
+-------------------------- */
+function renderPendingItems() {
+  const box = document.getElementById("orderItems");
+  if (pendingItems.length === 0) {
+    box.innerHTML = `<div class="text-gray-500">Товари не додані.</div>`;
+    return;
+  }
+  box.innerHTML = pendingItems.map(i => `• product_id=${i.product_id}, qty=${i.quantity}`).join("<br>");
+}
+
+document.getElementById("addItemBtn").addEventListener("click", () => {
+  const product_id = parseInt(document.getElementById("productSelect").value, 10);
+  const quantity = parseInt(document.getElementById("productQty").value, 10);
+
+  if (!product_id || quantity < 1) {
+    showMessage("❌ Некоректні дані товару", "error");
+    return;
+  }
+
+  pendingItems.push({ product_id, quantity });
+  renderPendingItems();
+  showMessage("✅ Товар додано до списку", "success");
+});
+
+async function loadOrders() {
+  const orders = await apiFetch(API.orders);
+  const list = document.getElementById("ordersList");
+  list.innerHTML = "";
+
+  if (!orders || orders.length === 0) {
+    list.innerHTML = `<div class="text-gray-500">Замовлень ще немає.</div>`;
+    return;
+  }
+
+  for (const o of orders) {
+    const order = o.order || {};
+    const items = o.items || [];
+    const div = document.createElement("div");
+    div.className = "border rounded p-3";
+
+    const itemsHtml = items.map(it => `<li>${it.title} — x${it.quantity} — ${it.price} USD</li>`).join("");
+
+    div.innerHTML = `
+      <div class="flex justify-between items-start gap-3">
+        <div>
+          <div class="font-semibold">Замовлення #${order.id} — ${order.customer_name}</div>
+          <div class="text-xs text-gray-500">${order.created_at || ""}</div>
+        </div>
+        <div class="min-w-[170px]">
+          <div class="text-xs text-gray-500 mb-1">Статус:</div>
+          <div class="flex gap-2">
+            <input class="border p-1 w-full" value="${order.status || "new"}" data-oid="${order.id}">
+            <button class="bg-blue-700 text-white px-2 py-1 rounded" data-btn-oid="${order.id}">OK</button>
+          </div>
+        </div>
+      </div>
+      <ul class="mt-2 text-sm">${itemsHtml}</ul>
+    `;
+
+    const input = div.querySelector(`input[data-oid="${order.id}"]`);
+    const btn = div.querySelector(`button[data-btn-oid="${order.id}"]`);
+
+    btn.addEventListener("click", async () => {
+      const status = input.value.trim();
+      if (status.length < 2) {
+        showMessage("❌ Статус має бути мінімум 2 символи", "error");
+        return;
+      }
+      try {
+        showLoading(true);
+        await apiFetch(`${API.orders}/${order.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status })
+        });
+        showMessage("✅ Статус оновлено", "success");
+        await loadOrders();
+      } catch (e) {
+        showMessage("❌ " + e.message, "error");
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    list.appendChild(div);
+  }
+}
+
+document.getElementById("orderForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const customer_name = document.getElementById("customerName").value.trim() || "Гість";
+
+  if (pendingItems.length === 0) {
+    showMessage("❌ Додай хоча б один товар у замовлення", "error");
+    return;
+  }
+
+  try {
+    showLoading(true);
+    await apiFetch(API.orders, {
+      method: "POST",
+      body: JSON.stringify({ customer_name, items: pendingItems })
+    });
+    showMessage("✅ Замовлення створено", "success");
+    pendingItems = [];
+    renderPendingItems();
+    e.target.reset();
+    await loadOrders();
+  } catch (err) {
+    showMessage("❌ " + err.message, "error");
+  } finally {
+    showLoading(false);
+  }
+});
+
+/* -------------------------
+   INIT
+-------------------------- */
+window.addEventListener("load", async () => {
+  try {
+    showLoading(true);
+    await loadProducts();
+    renderPendingItems();
+    await loadFeedbacks();
+    await loadOrders();
+  } catch (e) {
+    showMessage("❌ " + e.message, "error");
+  } finally {
+    showLoading(false);
+  }
+});
+</script>
+{% endblock %}
