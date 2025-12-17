@@ -30,7 +30,7 @@ flowchart LR
 * `app.py` — старт Flask, реєстрація Blueprint, CORS, маршрути сторінок.
 * `routes/shop.py` — магазин, корзина, checkout.
 * `routes/feedback.py` — сторінка відгуків (HTML).
-* `routes/admin.py` — адмін-панель (логін + керування товарами/замовленнями/клієнтами/відгуками).
+* `routes/admin.py` — адмін-панель (логін + керування товарами/замовленнями/відгуками).
 * `routes/api.py` — JSON API: products, feedbacks, orders (для API Demo).
 * `routes/api_feedback.py` — JSON API v1 (розширений CRUD для feedback).
 
@@ -646,17 +646,6 @@ docker-compose монтує `./data` → `/app/data`, щоб база збері
 * `FLASK_SECRET_KEY` — секретний ключ для Flask session
 * `DATABASE_PATH` — шлях до sqlite (за потреби)
 
-> Якщо треба — можу дати точний патч коду, щоб app.secret_key брався з env.
-
-````
-
----
-
-# 6) Оновлений README.md
-
-Ось “універсальний” README (під ваш проєкт):
-
-```md
 # MotoDrive
 
 Вебзастосунок-магазин на Flask з корзиною, відгуками та адмін-панеллю. Додатково реалізовано JSON API та демонстраційну сторінку API Demo з асинхронним JavaScript (fetch/async/await).
